@@ -84,6 +84,16 @@ def test_filter_by_tag_total_jobs_counts_all():
     assert result.total_jobs == 5
 
 
+def test_filter_by_tag_single_server_with_multiple_matching_jobs():
+    """Ensure matched_servers contains only one entry when multiple jobs on the
+    same server match the tag, rather than one entry per matched job."""
+    config = _make_config()
+    result = filter_by_tag(config, "nightly")
+    # Both "backup" and "report" on web-01 carry the "nightly" tag.
+    assert result.matched_jobs == 2
+    assert len(result.matched_servers) == 1
+
+
 def test_list_all_tags_returns_sorted_unique():
     config = _make_config()
     tags = list_all_tags(config)
