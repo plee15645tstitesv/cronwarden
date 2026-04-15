@@ -1,24 +1,31 @@
-"""Generate human-readable reports from cron job audit results."""
+"""Build structured report objects from audit results."""
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
+
 from cronwarden.config import CronJob, Server
 from cronwarden.validator import ValidationResult
+from cronwarden.explainer import explain_schedule
 
 
 @dataclass
 class JobReport:
-    server: str
     job: CronJob
     result: ValidationResult
 
     @property
     def status_icon(self) -> str:
-        return "✓" if self.result.valid else "✗"
+        return "✅" if self.result.valid else "❌"
 
+    @property
     def summary_line(self) -> str:
-        desc = f" — {self.job.description}" if self.job.description else ""
-        return f"  [{self.status_icon}] {self.job.name}{desc} ({self.job.schedule})"
+        explanation = explain_schedule(self.job.schedule)
+        status = "OK" if self.result.valid else "; ".join(self.result.errors)
+        return f"{self.status_icon} [{self.job.name}] {self.job.schedule} — {explanation} | {status}"
+
+    @property
+    def schedule_explanation(self) -> str:
+        return explain_schedule(self.job.schedule)
 
 
 @dataclass
@@ -38,44 +45,17 @@ class ServerReport:
     def failed(self) -> int:
         return self.total - self.passed
 
-
-@dataclass
-class AuditReport:
-    server_reports: List[ServerReport] = field(default_factory=list)
-
     @property
-    def total_jobs(self) -> int:
-        return sum(sr.total for sr in self.server_reports)
+    def has_failures(self) -> bool:
+        return self.failed > 0
 
-    @property
-    def total_passed(self) -> int:
-        return sum(sr.passed for sr in self.server_reports)
-
-    @property
-    def total_failed(self) -> int:
-        return sum(sr.failed for sr in self.server_reports)
+    def add(self, job: CronJob, result: ValidationResult) -> None:
+        self.job_reports.append(JobReport(job=job, result=result))
 
 
-def format_report(audit: AuditReport, verbose: bool = False) -> str:
-    lines = ["CronWarden Audit Report", "=" * 40]
-
-    for sr in audit.server_reports:
-        lines.append(f"\nServer: {sr.server.host} (user: {sr.server.user})")
-        lines.append(f"  Jobs: {sr.total}  Passed: {sr.passed}  Failed: {sr.failed}")
-
-        for jr in sr.job_reports:
-            lines.append(jr.summary_line())
-            if not jr.result.valid:
-                for err in jr.result.errors:
-                    lines.append(f"      ! {err}")
-            elif verbose and jr.result.warnings:
-                for warn in jr.result.warnings:
-                    lines.append(f"      ~ {warn}")
-
-    lines.append("\n" + "=" * 40)
-    lines.append(
-        f"Total: {audit.total_jobs}  Passed: {audit.total_passed}  Failed: {audit.total_failed}"
-    )
-    status = "ALL CHECKS PASSED" if audit.total_failed == 0 else "SOME CHECKS FAILED"
-    lines.append(status)
-    return "\n".join(lines)
+def build_server_report(server: Server, results: dict) -> ServerReport:
+    """Construct a ServerReport from a server and a mapping of job -> ValidationResult."""
+    report = ServerReport(server=server)
+    for job, result in results.items():
+        report.add(job, result)
+    return report
