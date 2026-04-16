@@ -30,6 +30,14 @@ class SearchResult:
     def total(self) -> int:
         return len(self.matches)
 
+    def by_server(self) -> dict:
+        """Return matches grouped by server name."""
+        grouped: dict = {}
+        for match in self.matches:
+            key = match.server.name
+            grouped.setdefault(key, []).append(match)
+        return grouped
+
 
 def _job_matches(
     job: CronJob, query: str
