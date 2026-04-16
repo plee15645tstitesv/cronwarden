@@ -45,6 +45,15 @@ def test_save_creates_snapshot_file(config_file, snapshot_dir):
     assert len(snaps) == 1
 
 
+def test_save_snapshot_content_is_valid_json(config_file, snapshot_dir):
+    """Saved snapshot file should be valid JSON with expected structure."""
+    run_snapshot(["save", config_file, "--snapshot-dir", snapshot_dir])
+    snap = list(Path(snapshot_dir).glob("*.json"))[0]
+    data = json.loads(snap.read_text())
+    assert isinstance(data, dict)
+    assert "servers" in data
+
+
 def test_save_with_label(config_file, snapshot_dir):
     run_snapshot(["save", config_file, "--label", "mysnap", "--snapshot-dir", snapshot_dir])
     snaps = list(Path(snapshot_dir).glob("*.json"))
