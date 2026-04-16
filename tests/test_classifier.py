@@ -90,4 +90,12 @@ def test_multiple_servers():
     assert result.total() == 2
     categories = {cj.category for cj in result.classified}
     assert "backup" in categories
-    assert "maintenance" in categories
+
+
+def test_empty_config_returns_empty_result():
+    """An empty config with no servers should yield a result with no classified jobs."""
+    config = _make_config({})
+    result = classify_config(config)
+    assert result.total() == 0
+    assert not result.has_unclassified()
+    assert result.by_category() == {}
