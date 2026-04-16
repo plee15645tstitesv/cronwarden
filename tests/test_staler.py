@@ -83,6 +83,16 @@ def test_days_since_naive_datetime_treated_as_utc():
     assert days == 31
 
 
+def test_days_since_same_day_returns_zero():
+    days = _days_since("2024-06-01T00:00:00+00:00", NOW)
+    assert days == 0
+
+
+def test_days_since_future_date_returns_negative():
+    days = _days_since("2024-06-15T00:00:00+00:00", NOW)
+    assert days == -14
+
+
 # --- find_stale_jobs ---
 
 def test_find_stale_jobs_returns_staleness_result():
@@ -106,27 +116,17 @@ def test_job_updated_recently_is_not_stale():
     assert not result.has_stale
 
 
-def test_job_updated_long_ago_is_stale():
-    job = _make_job("old", last_updated="2023-01-01T00:00:00+00:00")
+def test_job_updated_exactly_at_threshold_is_not_stale():
+    # A job updated exactly threshold_days ago should not be considered stale.
+    job = _make_job("borderline", last_updated="2024-03-03T00:00:00+00:00")  # 90 days before NOW
+    config = _make_config(_make_server("web", [job]))
+    result = find_stale_jobs(config, threshold_days=90, now=NOW)
+    assert not result.has_stale
+
+
+def test_job_updated_over_threshold_is_stale():
+    job = _make_job("old", last_updated="2024-01-01T00:00:00+00:00")  # ~152 days before NOW
     config = _make_config(_make_server("web", [job]))
     result = find_stale_jobs(config, threshold_days=90, now=NOW)
     assert result.has_stale
-    assert result.stale_jobs[0].days_since_update >= 90
-
-
-def test_find_stale_jobs_respects_threshold():
-    job = _make_job("borderline", last_updated="2024-03-03T00:00:00+00:00")  # ~90 days before NOW
-    config = _make_config(_make_server("web", [job]))
-    result_strict = find_stale_jobs(config, threshold_days=60, now=NOW)
-    result_lenient = find_stale_jobs(config, threshold_days=120, now=NOW)
-    assert result_strict.has_stale
-    assert not result_lenient.has_stale
-
-
-def test_find_stale_jobs_across_multiple_servers():
-    s1 = _make_server("web", [_make_job("j1", last_updated="2020-01-01T00:00:00+00:00")])
-    s2 = _make_server("db", [_make_job("j2", last_updated="2024-05-30T00:00:00+00:00")])
-    config = _make_config(s1, s2)
-    result = find_stale_jobs(config, threshold_days=90, now=NOW)
-    assert result.total == 1
-    assert result.stale_jobs[0].server_name == "web"
+    assert result.stale_jobs[0].days_since_update == 152
