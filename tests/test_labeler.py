@@ -83,3 +83,15 @@ def test_by_label_groups_correctly():
 def test_has_labels_false_when_all_clean():
     result = LabelResult(labeled=[])
     assert not result.has_labels()
+
+
+def test_has_labels_true_when_any_labeled():
+    job = _make_job(command="sudo /usr/bin/clean")
+    config = _make_config(servers=[Server(name="s", jobs=[job])])
+    result = label_config(config)
+    assert result.has_labels()
+
+
+def test_label_result_total_empty():
+    result = LabelResult(labeled=[])
+    assert result.total() == 0
