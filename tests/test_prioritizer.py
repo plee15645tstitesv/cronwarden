@@ -53,6 +53,11 @@ def test_total_counts_all_jobs():
     assert result.total() == 3
 
 
+def test_total_empty_config():
+    result = prioritize_config(_make_config())
+    assert result.total() == 0
+
+
 def test_has_critical_true_when_backup_present():
     server = _make_server(jobs=[_make_job(name="backup-logs", command="backup.sh")])
     result = prioritize_config(_make_config(server))
@@ -75,6 +80,12 @@ def test_by_priority_filters_correctly():
     critical = result.by_priority("critical")
     assert len(critical) == 1
     assert critical[0].job.name == "backup"
+
+
+def test_by_priority_returns_empty_for_unknown_priority():
+    server = _make_server(jobs=[_make_job(name="backup", command="backup.sh")])
+    result = prioritize_config(_make_config(server))
+    assert result.by_priority("nonexistent") == []
 
 
 def test_entry_summary_contains_server_and_job():
