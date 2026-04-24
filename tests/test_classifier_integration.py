@@ -61,3 +61,13 @@ def test_integration_unclassified_present(config_file):
     assert result.has_unclassified()
     unclassified_names = [j.name for _, j in result.unclassified]
     assert "mystery-job" in unclassified_names
+
+
+def test_integration_all_jobs_accounted_for(config_file):
+    """Ensure classified + unclassified jobs sum to the total job count."""
+    config = load_config(config_file)
+    result = classify_config(config)
+    by_cat = result.by_category()
+    classified_count = sum(len(jobs) for jobs in by_cat.values())
+    unclassified_count = len(result.unclassified)
+    assert classified_count + unclassified_count == result.total()
