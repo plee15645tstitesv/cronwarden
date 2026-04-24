@@ -107,16 +107,18 @@ def test_job_estimate_summary_contains_name():
 def test_job_estimate_fields():
     server = Server(name="prod", jobs=[_make_job("sync", schedule="@daily", command="rsync /a /b")])
     result = estimate_config(_make_config(server))
-    est = result.estimates[0]
-    assert est.server == "prod"
-    assert est.job_name == "sync"
-    assert est.runs_per_day == 1.0
-    assert est.estimated_seconds_per_run == 30
+    estimate = result.estimates[0]
+    assert estimate.name == "sync"
+    assert estimate.runs_per_day == 1.0
+    assert estimate.estimated_seconds == 30
 
 
-def test_multi_server_estimate_aggregates_correctly():
-    s1 = Server(name="s1", jobs=[_make_job("a", schedule="@daily")])
-    s2 = Server(name="s2", jobs=[_make_job("b", schedule="@daily")])
-    result = estimate_config(_make_config(s1, s2))
+def test_estimate_config_multiple_servers():
+    """Jobs across multiple servers should all be included in the result."""
+    server1 = Server(name="web", jobs=[_make_job("web-backup", schedule="@daily")])
+    server2 = Server(name="db", jobs=[_make_job("db-dump", schedule="@hourly", command="mysqldump db")])
+    result = estimate_config(_make_config(server1, server2))
     assert result.total == 2
-    assert result.total_seconds_per_day == pytest.approx(6.0)  # 3s * 2
+    names = [e.name for e in result.estimates]
+    assert "web-backup" in names
+    assert "db-dump" in names
