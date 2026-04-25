@@ -45,7 +45,20 @@ class TemplateResult:
 
 
 def list_templates() -> List[str]:
-    return list(COMMON_TEMPLATES.keys())
+    """Return a sorted list of available template names."""
+    return sorted(COMMON_TEMPLATES.keys())
+
+
+def get_template_info(template_name: str) -> dict:
+    """Return the schedule and description for a named template.
+
+    Raises ValueError if the template name is not found.
+    """
+    if template_name not in COMMON_TEMPLATES:
+        raise ValueError(
+            f"Unknown template '{template_name}'. Available: {', '.join(sorted(COMMON_TEMPLATES))}"
+        )
+    return dict(COMMON_TEMPLATES[template_name])
 
 
 def generate_template(
@@ -55,11 +68,22 @@ def generate_template(
     server: str,
     tags: Optional[List[str]] = None,
 ) -> TemplateResult:
-    if template_name not in COMMON_TEMPLATES:
-        raise ValueError(
-            f"Unknown template '{template_name}'. Available: {', '.join(COMMON_TEMPLATES)}"
-        )
-    tmpl = COMMON_TEMPLATES[template_name]
+    """Generate a TemplateResult from a named template and job parameters.
+
+    Args:
+        template_name: One of the keys in COMMON_TEMPLATES.
+        job_name: The name to assign to the cron job.
+        command: The shell command the cron job will execute.
+        server: The server on which the job will run.
+        tags: Optional list of tags to attach to the job.
+
+    Returns:
+        A populated TemplateResult instance.
+
+    Raises:
+        ValueError: If template_name is not a recognised template.
+    """
+    tmpl = get_template_info(template_name)
     return TemplateResult(
         name=job_name,
         schedule=tmpl["schedule"],
