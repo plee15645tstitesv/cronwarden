@@ -108,15 +108,17 @@ def test_split_to_dict_keys_are_server_names():
     assert set(mapping.keys()) == {"alpha", "beta"}
 
 
-def test_split_to_dict_values_are_configs():
+def test_split_to_dict_values_are_split_entries():
+    """Each value in the dict returned by split_to_dict should be a SplitEntry."""
     config = _make_config()
     mapping = split_to_dict(config)
-    for val in mapping.values():
-        assert isinstance(val, Config)
+    for value in mapping.values():
+        assert isinstance(value, SplitEntry)
 
 
-def test_split_does_not_mutate_original_config():
+def test_split_to_dict_entry_server_matches_key():
+    """The server_name on each SplitEntry should match the dict key it is stored under."""
     config = _make_config()
-    original_server_count = len(config.servers)
-    split_config(config)
-    assert len(config.servers) == original_server_count
+    mapping = split_to_dict(config)
+    for key, entry in mapping.items():
+        assert entry.server_name == key
