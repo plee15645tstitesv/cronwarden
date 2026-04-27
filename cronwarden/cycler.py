@@ -32,6 +32,10 @@ class CycleResult:
     def total(self) -> int:
         return len(self.entries)
 
+    def by_server(self, server_name: str) -> List[CycleEntry]:
+        """Return all cycle entries for a specific server."""
+        return [e for e in self.entries if e.server == server_name]
+
 
 def _parse_minute(expr: str) -> Optional[int]:
     """Return a fixed minute value or None if wildcard/step."""
